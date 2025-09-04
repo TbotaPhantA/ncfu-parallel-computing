@@ -20,8 +20,7 @@ for i in range(N):
   x[i] = float(f3.readline())
 f3.close()
 
-for j in range(M):
-  b = dot(A, x)
+b = dot(A, x)
 
 f4 = open('Results_sequential.dat', 'w')
 for j in range(M):
