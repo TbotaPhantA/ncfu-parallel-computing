@@ -39,6 +39,7 @@ M_part = array(0, dtype=int32)
 
 comm.Scatterv([rcounts, ones(numprocs, dtype=int32), array(range(numprocs)), MPI.INT], [M_part, 1, MPI.INT], root=0)
 
+# считывание матрицы
 A_part = empty((M_part, N), dtype=float64)
 if rank == 0:
     f2 = open('AData.dat', 'r')
@@ -54,6 +55,7 @@ else: # rank != 0
     comm.Scatterv([None, None, None, None],
                  [A_part, M_part*N, MPI.DOUBLE], root=0)
 
+# считывание вектора
 x = empty(N, dtype=float64)
 if rank == 0:
     f3 = open('xData.dat', 'r')
@@ -63,8 +65,10 @@ if rank == 0:
 
 comm.Bcast([x, N, MPI.DOUBLE], root=0)
 
+# вычисления
 b_part = dot(A_part, x)
 
+# сборка результата
 if rank == 0:
   b = empty(M, dtype=float64)
 else:
@@ -72,6 +76,7 @@ else:
 
 comm.Gatherv([b_part, M_part, MPI.DOUBLE], [b, rcounts, displs, MPI.DOUBLE], root=0)
 
+# запись результата в файл
 if (rank == 0):
   f4 = open('Results_parallel_optimized.dat', 'w')
   for j in range(M):
