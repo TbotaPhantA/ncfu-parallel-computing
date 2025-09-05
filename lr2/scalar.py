@@ -50,3 +50,4 @@ comm.Reduce([ScalP_temp, 1, MPI.DOUBLE], [ScalP, 1, MPI.DOUBLE], op=MPI.SUM, roo
 # comm.Allreduce([ScalP_temp, 1, MPI.DOUBLE], [ScalP, 1, MPI.DOUBLE], op=MPI.SUM) # сборка на всех процессах, а не только на корневом
 
 print('ScalP = {0:6.1f} on process {1}'.format(ScalP, rank))
+

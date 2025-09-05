@@ -50,7 +50,6 @@ if rank == 0:
     f2.close()
     comm.Scatterv([A, rcounts*N, displs*N, MPI.DOUBLE],
                  [A_part, M_part*N, MPI.DOUBLE], root=0)
-
 else: # rank != 0
     comm.Scatterv([None, None, None, None],
                  [A_part, M_part*N, MPI.DOUBLE], root=0)
