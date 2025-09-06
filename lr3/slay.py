@@ -139,9 +139,13 @@ x_part = empty(rcounts_N[rank], dtype=float64)
 comm.Scatterv([x, rcounts_N, displs_N, MPI.DOUBLE], 
               [x_part, rcounts_N[rank], MPI.DOUBLE], root=0)
 
+# каждый процесс знает свой кусок матрицы A, свой кусок вектора b,
+# свой кусок вектора x и вспомогательные
+# параметры, rcounts_N[rank] - это по сути N_part
 x_part = conjugate_gradient_method(A_part, b_part, x_part, 
                                    N, rcounts_N[rank], rcounts_N, displs_N)
 
+# собираем вектор x
 comm.Gatherv([x_part, rcounts_N[rank], MPI.DOUBLE], 
              [x, rcounts_N, displs_N, MPI.DOUBLE], root=0)
 
