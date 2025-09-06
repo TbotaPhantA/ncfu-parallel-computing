@@ -7,32 +7,21 @@ numprocs = comm.Get_size()
 rank = comm.Get_rank()
 
 def conjugate_gradient_method(A_part, b_part, x, N) :
-    
     p = empty(N, dtype=float64)
     r = empty(N, dtype=float64)
     q = empty(N, dtype=float64)
-    
     s = 1
-    
     p = 0.
-
     while s <= N :
-
         if s == 1 :
             r_temp = dot(A_part.T, dot(A_part, x) - b_part)
-            comm.Allreduce([r_temp, N, MPI.DOUBLE],
-                           [r, N, MPI.DOUBLE], op=MPI.SUM)
+            comm.Allreduce([r_temp, N, MPI.DOUBLE], [r, N, MPI.DOUBLE], op=MPI.SUM)
         else :
             r = r - q/dot(p, q)
-            
         p = p + r/dot(r, r)
-           
         q_temp = dot(A_part.T, dot(A_part, p))
-        comm.Allreduce([q_temp, N, MPI.DOUBLE],
-                       [q, N, MPI.DOUBLE], op=MPI.SUM)
-        
+        comm.Allreduce([q_temp, N, MPI.DOUBLE], [q, N, MPI.DOUBLE], op=MPI.SUM)
         x = x - p/dot(p, q)
-        
         s = s + 1
     
     return x
