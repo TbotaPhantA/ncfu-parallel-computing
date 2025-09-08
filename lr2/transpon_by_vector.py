@@ -78,4 +78,7 @@ else:
 comm.Reduce([b_temp, N, MPI.DOUBLE], [b, N, MPI.DOUBLE], op=MPI.SUM, root=0)
 
 if rank == 0:
-  print(b)
+  f4 = open('Results_parallel.dat', 'w')
+  for j in range(M):
+    print(b[j], file=f4)
+  f4.close()
