@@ -1,5 +1,3 @@
-import csv
-import os
 from mpi4py import MPI
 from numpy import empty, array, int32, float64, zeros, arange, dot
 from matplotlib.pyplot import style, figure, axes, show
@@ -7,10 +5,6 @@ from matplotlib.pyplot import style, figure, axes, show
 comm = MPI.COMM_WORLD
 numprocs = comm.Get_size()
 rank = comm.Get_rank()
-if (rank == 0):
-    t0 = MPI.Wtime()
-else:
-    t0 = None
 
 def conjugate_gradient_method(A_part, b_part, x, N) :
     p = empty(N, dtype=float64)
@@ -96,22 +90,10 @@ x = zeros(N, dtype=float64)
 
 x = conjugate_gradient_method(A_part, b_part, x, N)
 
-if rank == 0:
-    t1 = MPI.Wtime()
-    elapsed = t1 - t0
-    csv_file = "timings_slay_simplified.csv"
-    need_header = not os.path.exists(csv_file)
-    with open(csv_file, "a", newline="") as f:
-        writer = csv.writer(f)
-        if need_header:
-            writer.writerow(["nprocs", "time_seconds"])
-        writer.writerow([numprocs, elapsed])
-    print(f"nprocs={numprocs}, time={elapsed:.6f} s (written to {csv_file})")
-
-# if rank == 0 :
-#     style.use('dark_background')
-#     fig = figure()
-#     ax = axes(xlim=(0, N), ylim=(-1.5, 1.5))
-#     ax.set_xlabel('i'); ax.set_ylabel('x[i]')
-#     ax.plot(arange(N), x, '-y', lw=3)
-#     show()
+if rank == 0 :
+    style.use('dark_background')
+    fig = figure()
+    ax = axes(xlim=(0, N), ylim=(-1.5, 1.5))
+    ax.set_xlabel('i'); ax.set_ylabel('x[i]')
+    ax.plot(arange(N), x, '-y', lw=3)
+    show()

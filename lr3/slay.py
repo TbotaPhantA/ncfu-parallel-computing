@@ -1,3 +1,5 @@
+import csv
+import os
 from mpi4py import MPI
 from numpy import empty, array, int32, float64, zeros, arange, dot
 from matplotlib.pyplot import style, figure, axes, show
@@ -5,9 +7,13 @@ from matplotlib.pyplot import style, figure, axes, show
 comm = MPI.COMM_WORLD
 numprocs = comm.Get_size()
 rank = comm.Get_rank()
+if (rank == 0):
+    t0 = MPI.Wtime()
+else:
+    t0 = None
 
 def conjugate_gradient_method(A_part, b_part, x_part, 
-                              N, N_part, rcounts_N, displs_N) :
+                            N, N_part, rcounts_N, displs_N) :
     
     x = empty(N, dtype=float64); p = empty(N, dtype=float64)
     
@@ -34,14 +40,14 @@ def conjugate_gradient_method(A_part, b_part, x_part,
         else :
             ScalP_temp[0] = dot(p_part, q_part)
             comm.Allreduce([ScalP_temp, 1, MPI.DOUBLE],
-                           [ScalP, 1, MPI.DOUBLE], op=MPI.SUM)
+                        [ScalP, 1, MPI.DOUBLE], op=MPI.SUM)
             r_part = r_part - q_part/ScalP
             
         ScalP_temp[0] = dot(r_part, r_part)
         comm.Allreduce([ScalP_temp, 1, MPI.DOUBLE],
-                       [ScalP, 1, MPI.DOUBLE], op=MPI.SUM)
+                    [ScalP, 1, MPI.DOUBLE], op=MPI.SUM)
         p_part = p_part + r_part/ScalP
-           
+        
         comm.Allgatherv([p_part, N_part, MPI.DOUBLE],
                         [p, rcounts_N, displs_N, MPI.DOUBLE])
         q_temp = dot(A_part.T, dot(A_part, p))
@@ -51,7 +57,7 @@ def conjugate_gradient_method(A_part, b_part, x_part,
         
         ScalP_temp[0] = dot(p_part, q_part)
         comm.Allreduce([ScalP_temp, 1, MPI.DOUBLE],
-                       [ScalP, 1, MPI.DOUBLE], op=MPI.SUM)
+                    [ScalP, 1, MPI.DOUBLE], op=MPI.SUM)
         x_part = x_part - p_part/ScalP
         
         s = s + 1
@@ -123,9 +129,9 @@ else :
     b = None
     
 b_part = empty(M_part, dtype=float64) 
- 	
+    
 comm.Scatterv([b, rcounts_M, displs_M, MPI.DOUBLE], 
-              [b_part, M_part, MPI.DOUBLE], root=0)
+            [b_part, M_part, MPI.DOUBLE], root=0)
 
 if rank == 0 :
     x = zeros(N, dtype=float64)
@@ -137,17 +143,29 @@ x_part = empty(rcounts_N[rank], dtype=float64)
 # распределяем по процессам кусочки вектора x, чтобы
 # каждый процесс помещал в него результат
 comm.Scatterv([x, rcounts_N, displs_N, MPI.DOUBLE], 
-              [x_part, rcounts_N[rank], MPI.DOUBLE], root=0)
+            [x_part, rcounts_N[rank], MPI.DOUBLE], root=0)
 
 # каждый процесс знает свой кусок матрицы A, свой кусок вектора b,
 # свой кусок вектора x и вспомогательные
 # параметры, rcounts_N[rank] - это по сути N_part
 x_part = conjugate_gradient_method(A_part, b_part, x_part, 
-                                   N, rcounts_N[rank], rcounts_N, displs_N)
+                                N, rcounts_N[rank], rcounts_N, displs_N)
 
 # собираем вектор x
 comm.Gatherv([x_part, rcounts_N[rank], MPI.DOUBLE], 
-             [x, rcounts_N, displs_N, MPI.DOUBLE], root=0)
+            [x, rcounts_N, displs_N, MPI.DOUBLE], root=0)
+
+if rank == 0:
+    t1 = MPI.Wtime()
+    elapsed = t1 - t0
+    csv_file = "timings_slay.csv"
+    need_header = not os.path.exists(csv_file)
+    with open(csv_file, "a", newline="") as f:
+        writer = csv.writer(f)
+        if need_header:
+            writer.writerow(["nprocs", "time_seconds"])
+        writer.writerow([numprocs, elapsed])
+    print(f"nprocs={numprocs}, time={elapsed:.6f} s (written to {csv_file})")
 
 if rank == 0 :
     style.use('dark_background')
