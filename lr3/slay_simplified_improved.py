@@ -97,3 +97,24 @@ if rank == 0 :
     ax.set_xlabel('i'); ax.set_ylabel('x[i]')
     ax.plot(arange(N), x, '-y', lw=3)
     show()
+
+# Verification
+if rank == 0:
+    # Считываем всю матрицу A и вектор b ещё раз для верификации
+    A = empty((M, N), dtype=float64)
+    with open('AData.dat', 'r') as fA:
+        for j in range(M):
+            for i in range(N):
+                A[j, i] = float64(fA.readline())
+    b = empty(M, dtype=float64)
+    with open('bData.dat', 'r') as fb:
+        for j in range(M):
+            b[j] = float64(fb.readline())
+
+    # Решение через numpy.linalg.lstsq
+    from numpy.linalg import lstsq, norm
+    x_numpy, *_ = lstsq(A, b, rcond=None)
+
+    # Сравнение (относительная ошибка по L2-норме)
+    rel_err = norm(x - x_numpy) / (norm(x_numpy) + 1e-16)
+    print(f"Relative L2-error vs numpy lstsq: {rel_err:.3e}")
