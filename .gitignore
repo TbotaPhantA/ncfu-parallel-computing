@@ -92,3 +92,5 @@ ENV/
 #IDE
 .vscode
 .idea
+
+lr4/src/data/**

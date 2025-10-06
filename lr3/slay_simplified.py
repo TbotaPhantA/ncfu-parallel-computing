@@ -107,11 +107,3 @@ if rank == 0:
             writer.writerow(["nprocs", "time_seconds"])
         writer.writerow([numprocs, elapsed])
     print(f"nprocs={numprocs}, time={elapsed:.6f} s (written to {csv_file})")
-
-# if rank == 0 :
-#     style.use('dark_background')
-#     fig = figure()
-#     ax = axes(xlim=(0, N), ylim=(-1.5, 1.5))
-#     ax.set_xlabel('i'); ax.set_ylabel('x[i]')
-#     ax.plot(arange(N), x, '-y', lw=3)
-#     show()

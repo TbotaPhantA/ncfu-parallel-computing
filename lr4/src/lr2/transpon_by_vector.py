@@ -1,0 +1,100 @@
+from mpi4py import MPI
+from numpy import arange, empty , array , int32 , float64 , dot, ones
+from threadpoolctl import threadpool_limits
+
+with threadpool_limits(limits=1):
+  comm = MPI.COMM_WORLD
+  rank = comm.Get_rank()
+  numprocs = comm.Get_size()
+
+  dataPathPrefix = '../data/datasets/data_C/';
+  inPath = dataPathPrefix + 'in.dat';
+  ADataPath = dataPathPrefix + 'AData.dat';
+  xDataPath = dataPathPrefix + 'xData.dat';
+
+  if (rank == 0):
+    start_time = MPI.Wtime()
+
+  # считывание N и M
+  if rank == 0:
+    f1 = open(inPath, 'r')
+    M = array(int32(f1.readline()))
+    N = array(int32(f1.readline()))
+    f1.close()
+  else:
+    N = array(0, dtype=int32)
+
+  comm.Bcast([N, 1, MPI.INT], root=0)
+
+  # Обобщение программы на случай несогласованного числа входных данных и числа процессов, использующихся при расчётах
+  if rank == 0:
+    ave, res = divmod(M, numprocs -1)
+    rcounts = empty(numprocs , dtype=int32)
+    displs = empty(numprocs , dtype=int32)
+    
+    rcounts[0] = 0
+    displs[0] = 0
+    
+    for k in range(1, numprocs):
+      if k <= res:
+        rcounts[k] = ave+1
+      else:
+        rcounts[k] = ave
+      displs[k] = displs[k-1] + rcounts[k-1]
+  else: # rank != 0
+    rcounts = None
+    displs = None
+
+  # число строк матрицы а, которые будут содержаться на каждом процессе
+  M_part = array(0, dtype=int32)
+
+  # распределяем кусочки массива rcounts по процессам и кладём эти кусочки в M_part
+  comm.Scatter([rcounts, 1, MPI.INT], [M_part, 1, MPI.INT], root=0)
+
+  # нулевой процессы считывает матрицу из фала и отправляет её кусочки другми процессам
+  if rank == 0:
+    f2 = open(ADataPath, 'r')
+    for k in range(1, numprocs):
+      A_part = empty((rcounts[k], N), dtype=float64)
+      for j in range(rcounts[k]):
+        for i in range(N):
+          A_part[j,i] = float64(f2.readline())
+      comm.Send([A_part, rcounts[k]*N, MPI.DOUBLE], dest=k, tag=0)
+    f2.close()
+    A_part = empty((M_part, N), dtype=float64)
+  else:
+    A_part = empty((M_part, N), dtype=float64)
+    comm.Recv([A_part, M_part*N, MPI.DOUBLE], source=0, tag=0, status=None)
+
+  if rank == 0:
+    x = empty(M, dtype=float64)
+    f3 = open(xDataPath, 'r')
+    for j in range(M):
+      x[j] = float64(f3.readline())
+    f3.close()
+  else:
+    x = None
+
+  x_part = empty(M_part, dtype=float64)
+  comm.Scatterv([x, rcounts, displs, MPI.DOUBLE], [x_part, M_part, MPI.DOUBLE], root=0)
+
+  with threadpool_limits(limits=1):
+    b_temp = dot(A_part.T, x_part)
+
+  if rank == 0:
+    b = empty(N, dtype=float64)
+  else:
+    b = None
+
+  comm.Reduce([b_temp, N, MPI.DOUBLE], [b, N, MPI.DOUBLE], op=MPI.SUM, root=0)
+
+  if rank == 0:
+    end_time = MPI.Wtime()
+    elapsed = end_time - start_time
+    print(numprocs, N, M, round(elapsed, 2), sep=',')
+
+  if rank == 0:
+    f4 = open('Results_parallel.dat', 'w')
+    for j in range(M):
+      print(b[j], file=f4)
+    f4.close()
