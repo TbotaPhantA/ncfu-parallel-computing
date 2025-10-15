@@ -94,3 +94,4 @@ ENV/
 .idea
 
 lr4/src/data/**
+*.npz

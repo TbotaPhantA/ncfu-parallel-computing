@@ -1,0 +1,2 @@
+numprocs,N_x,N_y,M,time,speedup,efficiency
+1,50,50,500,2.5,1,1
